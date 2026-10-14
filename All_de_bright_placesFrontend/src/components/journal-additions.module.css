@@ -1,0 +1,7 @@
+.brightNote{max-width:980px;margin:40px auto 20px;padding:25px 30px;display:grid;grid-template-columns:1.05fr 1fr;gap:32px;background:#f2ecdf;border:1px solid var(--line);border-left:3px solid var(--accent)}
+.brightNote h2{font-size:32px;margin:8px 0}
+.brightNote p{font-size:11px;margin:0;max-width:390px}
+.brightNote ul{margin:0;padding:0;list-style:none;display:grid;gap:10px;align-content:center}
+.brightNote li{font-size:11px;line-height:1.6;padding-left:17px;position:relative}
+.brightNote li:before{content:"♡";position:absolute;left:0;color:var(--accent)}
+@media(max-width:767px){.brightNote{margin:20px 0 25px;padding:19px 18px;grid-template-columns:1fr;gap:15px}.brightNote h2{font-size:28px}.brightNote .eyebrow{font-size:8px;letter-spacing:1.4px}:global(nav){gap:14px;font-size:9px}}

@@ -1,0 +1,12 @@
+# Local application container. Supabase's CLI manages the local database containers.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - All_de_bright_placesFrontend/.env.local
+    environment:
+      HOSTNAME: 0.0.0.0

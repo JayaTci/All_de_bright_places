@@ -1,0 +1,37 @@
+# Runs isolated local Supabase services. Production credentials never belong here.
+project_id = "all-de-bright-places"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+[db.seed]
+enabled = false
+[studio]
+enabled = true
+port = 54323
+[local_smtp]
+enabled = true
+port = 54324
+[storage]
+enabled = true
+file_size_limit = "3MiB"
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/recovery"]
+jwt_expiry = 3600
+enable_signup = false
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+[auth.mfa]
+max_enrolled_factors = 2
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true

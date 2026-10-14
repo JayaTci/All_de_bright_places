@@ -1,0 +1,42 @@
+{
+  "name": "all-de-bright-places",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @bright/frontend dev",
+    "build": "pnpm --filter @bright/frontend build",
+    "start": "pnpm --filter @bright/frontend start",
+    "typecheck": "tsc --noEmit -p All_de_bright_placesFrontend/tsconfig.json && tsc --noEmit -p All_de_bright_placesBackend/tsconfig.json",
+    "lint": "eslint --config All_de_bright_placesFrontend/eslint.config.mjs All_de_bright_placesFrontend/src All_de_bright_placesFrontend/tests All_de_bright_placesBackend/src All_de_bright_placesBackend/tests All_de_bright_placesShared scripts",
+    "test": "vitest run --config All_de_bright_placesFrontend/vitest.config.ts",
+    "test:e2e": "playwright test --config tests/playwright.config.ts",
+    "test:db": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase test db",
+    "db:start": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase start",
+    "db:reset": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase db reset",
+    "check:secrets": "node scripts/check-secrets.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.4.0",
+    "prettier": "^3.9.10",
+    "supabase": "^2.75.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "supabase",
+      "esbuild"
+    ]
+  }
+}
