@@ -4,7 +4,7 @@ These scripts run only on an owner's machine. Set `OWNER_SUPABASE_URL` and `OWNE
 
 ## Provisioning
 
-Apply migrations first. In Supabase Auth, disable public signup and email signup. Enable TOTP enrollment/verification and configure the approved site URL and `/auth/recovery` redirect URL. Configure Turnstile in the Auth dashboard separately. Use the publishable key and URL in the application.
+Apply migrations first. In Supabase Auth, disable project-wide public signup while keeping the email provider enabled for password sign-in. Disabling the email provider also blocks the two owner-created accounts from signing in. Enable TOTP enrollment/verification and configure the approved site URL and `/auth/recovery` redirect URL. Configure Turnstile in the Auth dashboard separately. Use the publishable key and URL in the application.
 
 Set `OWNER_RUBY_EMAIL` and `OWNER_JAYATCI_EMAIL` privately, then run `node scripts/owner-provision.mjs`. The script generates strong temporary passwords, creates confirmed Auth users, and writes their immutable IDs to the editor allowlist. Read the generated private output to obtain temporary credentials and the IDs needed by server configuration. It skips already provisioned usernames. If provisioning interrupts between Auth user creation and allowlist insertion, inspect the dashboard and associate the existing user rather than creating duplicates.
 

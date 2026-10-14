@@ -4,12 +4,12 @@ A shared bucket list and memory journal for Ruby and Jayatci. Visitors can see g
 
 ## Run locally
 
-Requirements: Node.js 22 or later, pnpm 10, and the Supabase CLI.
+Requirements: Node.js 22 or later, pnpm 10, Docker Desktop, and the Supabase CLI.
 
 1. Install dependencies with `pnpm install`.
 2. Start local Supabase with `pnpm db:start`.
-3. Copy `.env.example` to `All_de_bright_placesFrontend/.env.local` and set the local Supabase publishable key and Turnstile values.
-4. Start the web app with `pnpm dev`. It opens at `http://127.0.0.1:3000`.
+3. Set the local Supabase URL and publishable key in the ignored `All_de_bright_placesFrontend/.env.local`. Add the two server-only editor email mappings. See [local setup](docs/setup.md).
+4. Start the web app with `pnpm dev`. It opens at `http://127.0.0.1:3000`. Private goals appear after editor sign-in and authenticator verification.
 
 The local database uses the migrations in `All_de_bright_placesDatabase/migrations`. Production setup, editor provisioning, backup, and recovery instructions are in [owner operations](docs/owner-operations.md).
 

@@ -15,7 +15,7 @@
     "test": "vitest run --config All_de_bright_placesFrontend/vitest.config.ts",
     "test:e2e": "playwright test --config tests/playwright.config.ts",
     "test:db": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase test db",
-    "db:start": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase start",
+    "db:start": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase start --exclude vector",
     "db:reset": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase db reset",
     "check:secrets": "node scripts/check-secrets.mjs"
   },

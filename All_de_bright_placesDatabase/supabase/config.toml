@@ -28,7 +28,8 @@ additional_redirect_urls = ["http://localhost:3000/auth/recovery"]
 jwt_expiry = 3600
 enable_signup = false
 [auth.email]
-enable_signup = false
+# Email password sign-in needs the provider enabled; auth.enable_signup still blocks public accounts.
+enable_signup = true
 enable_confirmations = true
 [auth.mfa]
 max_enrolled_factors = 2
