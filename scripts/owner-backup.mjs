@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ownerRequest } from './owner-client.mjs';
-const tables = ['editor_accounts', 'goals', 'goal_participants', 'memories', 'photos'];
+const tables = ['editor_accounts', 'goals', 'goal_participants', 'memories', 'photos', 'editor_history'];
 const directory = resolve('_workspace/owner', `backup-${Date.now()}`);
 await mkdir(resolve(directory, 'objects'), { recursive: true });
 const snapshot = { format: 1, capturedAt: new Date().toISOString(), tables: {} };

@@ -12,13 +12,17 @@ Deliver credentials to each editor yourself through your chosen private channel.
 
 ## Recovery
 
-Set `OWNER_RECOVERY_REDIRECT` to the application's approved `/auth/recovery` URL. Run `node scripts/owner-recovery.mjs ruby` or replace the name with `jayatci`. The recovery link is saved privately and its contents are never printed.
+Set `OWNER_RECOVERY_REDIRECT` to the application's exact approved `/auth/recovery` URL. Run `node scripts/owner-recovery.mjs ruby` or replace the name with `jayatci`. The script saves a site URL containing `token_hash` and `type=recovery`, which the recovery page can redeem. Its contents are never printed.
 
 After verifying the editor's identity yourself, use `--reset-mfa` only when their authenticator is lost. This removes the account's TOTP factors. The next password session still cannot access private journal data until a new factor is enrolled and verified. Recovery links expire and must not be committed or shared publicly. Delete local temporary credential and recovery files after use.
 
 ## Content backup and restoration
 
-Keep editors idle during capture because REST table exports are not a single database snapshot. Run `node scripts/owner-backup.mjs`. It exports all content tables, including Trash and private notes, and downloads both variants of every ready photo. It records account IDs for reference. Auth passwords and MFA secrets are intentionally not exported.
+Keep editors idle during capture because REST table exports are not a single database snapshot. Run `node scripts/owner-backup.mjs`. It exports all content tables, including Trash, private notes, and editor change history, and downloads both variants of every ready photo. It records account IDs for reference. Auth passwords and MFA secrets are intentionally not exported.
+
+Create a recovery key once with `node scripts/owner-archive.mjs keygen _workspace/owner/backup-recovery.key`. Encrypt each snapshot with `node scripts/owner-archive.mjs encrypt <backup-directory> <external-destination>.adbenc _workspace/owner/backup-recovery.key`. The archive uses AES-256-GCM, so a damaged archive or wrong key is rejected. Keep a copy of the encrypted archive off this computer and keep a copy of the key in a separate safe place. A copy on the same disk alone does not protect against disk failure. Never commit either file.
+
+To open an encrypted archive, run `node scripts/owner-archive.mjs decrypt <archive>.adbenc <new-empty-directory> <recovery-key-file>`. The tool verifies the archive before extracting it. Use the extracted directory with `owner-restore.mjs` against a separate target.
 
 Test restoration against a separate local or staging project. Apply the migration and provision both target editors. Set owner environment variables to that target, and set `OWNER_RESTORE_CONFIRM_URL` to the exact same target URL. Run `node scripts/owner-restore.mjs <backup-directory>`. The target must have no goals. Content associations use usernames, so fresh target Auth IDs work. Restored photos remain pending until both variants have uploaded.
 
