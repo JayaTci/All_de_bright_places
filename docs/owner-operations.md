@@ -26,4 +26,8 @@ If this same restoration interrupts, run it again with `--resume`. This flag per
 
 Run `node --test All_de_bright_placesDatabase/tests/owner-tools.test.mjs` for the automated local HTTP fixture check. It verifies content export, actual photo byte handling, restore order, and delayed photo publication. It does not substitute for restoring against a real Supabase target.
 
-Before production deployment, run the database authorization suite, configure login rate limiting in Vercel, verify the Auth/Turnstile settings, and check that only runtime publishable credentials are configured. Deploy migrations from a reviewed local environment. Free service limits and pausing behavior should be verified in the hosting dashboards at launch.
+## Login rate limit
+
+In the Vercel project Firewall, keep one active rate limit rule with both conditions: request path equals `/api/auth/login` and request method equals `POST`. Use a fixed window of 300 seconds, a limit of 10 requests, the IP counting key, and the default 429 response. The rule counts all matching login requests, including attempts that fail CAPTCHA or password verification. Vercel applies firewall changes without a redeploy. Hobby includes one rate limit rule per project; check the current plan limits before adding another.
+
+Before production deployment, run the database authorization suite, verify the Auth/Turnstile and firewall settings, and check that only runtime publishable credentials are configured. Deploy migrations from a reviewed local environment. Free service limits and pausing behavior should be verified in the hosting dashboards at launch.
