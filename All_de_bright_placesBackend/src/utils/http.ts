@@ -42,6 +42,7 @@ export function databaseError(error: { code?: string; message?: string } | null)
   if (!error) return;
   if (error.code === "P0001") {
     if (error.message === "CONFLICT") throw new HttpError(409, "This entry changed. Reload it before saving.");
+    if (error.message === "PROFILE_BUSY") throw new HttpError(409, "A picture change is still in progress. Try again shortly.");
     if (error.message === "NOT_FOUND") throw new HttpError(404, "Entry not found.");
     if (["TRASHED", "PHOTO_LIMIT", "INVALID_ACTION", "INVALID_DIRECTION", "INVALID_PARTICIPANT", "INVALID_PARTICIPANTS"].includes(error.message || "")) throw new HttpError(400, "Please check the supplied values.");
   }

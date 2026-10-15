@@ -1,20 +1,84 @@
 // Implements uncached journal, account, MFA, and image APIs behind thin Next.js routes.
 import "server-only";
 import { z } from "zod";
-import { goalInputSchema, goalMutationSchema, memoryInputSchema, memoryMutationSchema, loginSchema } from "@bright/shared";
+import { goalInputSchema, goalMutationSchema, memoryInputSchema, memoryMutationSchema, loginSchema, profileInputSchema, usernameSchema } from "@bright/shared";
 import { connection, serverClient } from "../config/supabase";
 import { editorSession, requireEditor } from "../services/auth";
 import { getJournal } from "../services/journal";
 import { MAX_UPLOAD_BYTES, normalizePhoto, photoPaths } from "../services/photos";
+import { getProfile, getProfiles, MAX_PROFILE_PICTURE_BYTES, profilePicturePath, publishProfilePicture, removeProfilePicture } from "../services/profiles";
 import { api, assertOrigin, databaseError, HttpError, identifier, json, PRIVATE_HEADERS, readJson, readUpload } from "../utils/http";
 
 type RouteContext = { params: Promise<{ id: string }> };
+type ProfileRouteContext = { params: Promise<{ username: string }> };
+// Rejects unknown profile paths before they reach database or storage queries.
+function profileUsername(value: string) {
+  const result = usernameSchema.safeParse(value);
+  if (!result.success) throw new HttpError(404, "Profile not found.");
+  return result.data;
+}
 const verifySchema = z.object({ factorId: z.uuid().optional(), code: z.string().regex(/^\d{6}$/) });
 const passwordSchema = z.object({ password: z.string().min(12).max(128) });
 const recoverySchema = z.object({ tokenHash: z.string().min(16).max(512), type: z.enum(["recovery", "invite"]) });
 
 /** Serves visible goals, distinguishing empty journals from unavailable services. */
 export async function journalGET() { return api(async () => json(await getJournal())); }
+
+/** Returns both public biographies and picture links allowed for this viewer. */
+export async function profilesGET() {
+  return api(async () => {
+    const client = await serverClient(); const session = await editorSession(client);
+    return json({ profiles: await getProfiles(client, Boolean(session?.aal2)) });
+  });
+}
+
+/** Saves only the MFA-verified caller's public bio and picture audience. */
+export async function profilePATCH(request: Request, context: ProfileRouteContext) {
+  return api(async () => {
+    assertOrigin(request); const username = profileUsername((await context.params).username);
+    const client = await serverClient(); const session = await requireEditor(client);
+    if (session.username !== username) throw new HttpError(403, "This profile belongs to another editor.");
+    const input = await readJson(request, profileInputSchema);
+    const result = await client.rpc("update_editor_profile", { p_username: username, p_bio: input.bio, p_visibility: input.pictureVisibility }); databaseError(result.error);
+    return json({ profile: await getProfile(client, username, true) });
+  });
+}
+
+/** Streams only the active picture when database and Storage visibility both permit it. */
+export async function profilePictureGET(_request: Request, context: ProfileRouteContext) {
+  return api(async () => {
+    const username = profileUsername((await context.params).username);
+    const client = await serverClient(); const session = await editorSession(client);
+    const profile = await getProfile(client, username, Boolean(session?.aal2));
+    if (!profile.pictureVersion) throw new HttpError(404, "Picture not found.");
+    const result = await client.storage.from("profile-pictures").download(profilePicturePath(username, profile.pictureVersion));
+    if (result.error || !result.data) throw new HttpError(404, "Picture not found.");
+    return new Response(result.data, { headers: { ...PRIVATE_HEADERS, "Content-Type": "image/webp", "Content-Security-Policy": "default-src 'none'; sandbox" } });
+  });
+}
+
+/** Replaces only the caller's picture after bounded raster normalization. */
+export async function profilePicturePOST(request: Request, context: ProfileRouteContext) {
+  return api(async () => {
+    assertOrigin(request); const username = profileUsername((await context.params).username);
+    const client = await serverClient(); const session = await requireEditor(client);
+    if (session.username !== username) throw new HttpError(403, "This profile belongs to another editor.");
+    const form = await readUpload(request, MAX_PROFILE_PICTURE_BYTES + 65_536); const file = form.get("file");
+    if (!(file instanceof File)) throw new HttpError(400, "Choose a picture to upload.");
+    if (file.size > MAX_PROFILE_PICTURE_BYTES) throw new HttpError(413, "Choose a picture smaller than 3 MB.");
+    return json({ profile: await publishProfilePicture(client, username, new Uint8Array(await file.arrayBuffer())) });
+  });
+}
+
+/** Removes only the caller's picture and returns the initial fallback profile. */
+export async function profilePictureDELETE(request: Request, context: ProfileRouteContext) {
+  return api(async () => {
+    assertOrigin(request); const username = profileUsername((await context.params).username);
+    const client = await serverClient(); const session = await requireEditor(client);
+    if (session.username !== username) throw new HttpError(403, "This profile belongs to another editor.");
+    return json({ profile: await removeProfilePicture(client, username) });
+  });
+}
 
 /** Creates a validated goal through the transactional database service. */
 export async function goalsPOST(request: Request) {

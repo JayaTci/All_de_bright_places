@@ -18,7 +18,7 @@ afterEach(() => { vi.resetAllMocks(); vi.unstubAllEnvs(); });
 describe("API failure states", () => {
   it("exposes a configured-false empty journal and no fake session", async () => {
     mocks.connection.mockReturnValue(null);
-    expect(await getJournal()).toEqual({ goals: [], editor: null, configured: false, unavailable: false });
+    expect(await getJournal()).toEqual({ goals: [], profiles: [], editor: null, configured: false, unavailable: false });
     const response = await sessionGET();
     expect(await response.json()).toEqual({ session: null, configured: false, factors: [] });
     expect(mocks.client).not.toHaveBeenCalled();
@@ -28,6 +28,17 @@ describe("API failure states", () => {
     mocks.client.mockRejectedValue(new Error("cookie secret"));
     const response = await sessionGET();
     expect(response.status).toBe(503); expect(await response.text()).not.toContain("secret");
+  });
+  it("keeps loaded journal goals when profile reads fail", async () => {
+    mocks.connection.mockReturnValue({ url: "https://service.example", key: "public" }); mocks.session.mockResolvedValue(null);
+    const row = { id: "goal", title: "Visible", description: "", category: "Travel", visibility: "public", position: 1, revision: 1,
+      deleted_at: null, created_at: "2026-10-14", updated_at: "2026-10-14", goal_participants: [], memories: [] };
+    const goalQuery = { select: () => ({ order: () => ({ eq: () => ({ is: async () => ({ data: [row], error: null }) }) }) }) };
+    const profileQuery = { select: () => ({ in: async () => ({ data: null, error: { code: "SERVICE_FAILURE" } }) }) };
+    mocks.client.mockResolvedValue({ from: (table: string) => table === "goals" ? goalQuery : profileQuery });
+    const journal = await getJournal();
+    expect(journal.goals).toHaveLength(1); expect(journal.goals[0].title).toBe("Visible");
+    expect(journal.profiles).toEqual([]); expect(journal.unavailable).toBe(false);
   });
   it("never publishes unfinished photographs or deleted memory contents in DTOs", () => {
     const mapped = mapGoal({

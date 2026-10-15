@@ -41,4 +41,26 @@ for (let offset = existingHistory.length; offset < history.length; offset += 100
   const batch = history.slice(offset, offset + 100).map(row => ({ actor: row.actor, goal_title: row.goal_title, summary: row.summary, changed_at: row.changed_at }));
   await ownerRequest('/rest/v1/editor_history', { method: 'POST', body: JSON.stringify(batch) });
 }
-console.log('Content restoration complete. Verify row counts and representative public and private photographs before using the target.');
+// Format-one snapshots made before editor profiles have no profile table.
+const profiles = snapshot.tables.editor_profiles ?? [];
+if (!Array.isArray(profiles)) throw new Error('Invalid profile backup data.');
+for (const profile of profiles) {
+  if (!['ruby', 'jayatci'].includes(profile.username) ||
+    (profile.picture_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.picture_id))) {
+    throw new Error('Invalid profile backup data.');
+  }
+  const bytes = profile.picture_id
+    ? await readFile(resolve(directory, 'objects', `profile-${profile.username}-${profile.picture_id}.webp`))
+    : null;
+  const path = `/rest/v1/editor_profiles?username=eq.${profile.username}`;
+  const fields = { bio: profile.bio, picture_visibility: profile.picture_visibility, updated_at: profile.updated_at };
+  // A pending image remains unpublished until the referenced object is present.
+  await ownerRequest(path, { method: 'PATCH', body: JSON.stringify({ ...fields, picture_id: null, pending_picture_id: null, pending_picture_at: null, stale_picture_id: null }) });
+  if (bytes) {
+    await ownerRequest(`/storage/v1/object/profile-pictures/${profile.username}/${profile.picture_id}.webp`, {
+      method: 'POST', headers: { 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: bytes,
+    });
+    await ownerRequest(path, { method: 'PATCH', body: JSON.stringify({ picture_id: profile.picture_id, updated_at: profile.updated_at }) });
+  }
+}
+console.log('Content restoration complete. Verify row counts and representative public and private images before using the target.');

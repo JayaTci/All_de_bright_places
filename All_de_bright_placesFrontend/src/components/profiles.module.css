@@ -1,0 +1,45 @@
+/* Styles the editor profiles as small inserts from the established paper notebook. */
+.avatar{width:28px;height:28px;display:inline-grid;place-items:center;overflow:hidden;flex:none;border-radius:50%;border:2px solid var(--paper);font-size:10px;font-weight:700;line-height:1}
+.avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.avatar + .avatar{margin-left:-6px;margin-right:10px}
+.avatar.large{width:64px;height:64px;border:3px solid #fcfaf4;font-family:var(--font-hand);font-size:31px}
+.ruby{background:#e4d9c7;color:#695440}
+.jayatci{background:#d5dbce;color:#485647}
+.cardsSection{display:grid;grid-template-columns:175px minmax(0,1fr);gap:43px;align-items:start;padding:0 0 52px}
+.cardsHeading{padding-top:17px}
+.cardsHeading h2{font-size:27px;margin:8px 0 0}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{display:flex;align-items:flex-start;gap:14px;min-width:0;min-height:116px;padding:17px 19px;border:1px solid var(--line);border-radius:3px;background:#fcfaf4;box-shadow:3px 3px 0 #eee8db}
+.card>div{min-width:0}
+.card h3{font-size:25px;margin:2px 0 5px}
+.card p{font-size:11px;line-height:1.55;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.editor{max-width:750px;margin:33px 0 43px;padding:26px 28px;border:1px solid var(--line);background:#fdfbf6;box-shadow:4px 4px 0 #eee8db}
+.editorIntro{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:18px}
+.editorIntro h2{font-size:35px;margin:7px 0 9px}
+.editorIntro p{font-size:12px;max-width:530px;margin:0}
+.editor .large{width:74px;height:74px;font-size:34px}
+.editor form{max-width:540px}
+.editor textarea{resize:vertical;min-height:93px}
+.editor select{width:100%;white-space:normal}
+.count{text-align:right;margin:-7px 0 14px;color:var(--muted);font-size:10px}
+.pictureArea{border-top:1px solid var(--line);margin-top:25px;padding-top:21px}
+.pictureArea h3{font-size:26px;margin:0 0 5px}
+.pictureArea>p{margin-bottom:15px}
+.pictureActions,.actions{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.fileLabel{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:1px solid var(--line);border-radius:4px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer;overflow:hidden}
+.fileLabel:hover{background:var(--soft)}
+.fileLabel:focus-within{outline:2px solid var(--accent);outline-offset:4px}
+.fileLabel input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.cropPanel{margin-top:18px;padding:17px;border:1px solid var(--line);background:var(--paper)}
+.cropTitle{font-family:var(--font-hand);font-size:25px;color:var(--ink);line-height:1.1;margin:0 0 5px}
+.cropPanel>p{font-size:11px}
+.cropPreview{display:block;width:min(256px,100%);height:auto;aspect-ratio:1;touch-action:none;cursor:grab;border-radius:5px;border:4px solid #fff;box-shadow:0 0 0 1px var(--line);background:#eae2d4;margin:18px auto}
+.cropPreview:active{cursor:grabbing}
+.cropSliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 19px}
+.cropSliders label{display:grid;gap:4px;font-size:11px;font-weight:700}
+.cropSliders input{width:100%;accent-color:var(--accent);cursor:pointer}
+.actions .button{min-height:44px}
+.feedback{display:flex;align-items:center;gap:8px;font-size:11px;margin:17px 0 0;color:#485647}
+@media(max-width:1024px){.cardsSection{grid-template-columns:145px minmax(0,1fr);gap:35px}.card{padding:16px 13px;gap:9px}.avatar.large{width:56px;height:56px;font-size:28px}}
+@media(max-width:767px){.cardsSection{grid-template-columns:1fr;gap:15px;padding:0 0 43px}.cardsHeading{padding:0 10px}.cardsHeading h2{font-size:30px}.cards{gap:11px}.card{min-height:110px;flex-direction:column;padding:15px}.card h3{margin-top:0}.editor{padding:22px 17px}.editorIntro h2{font-size:32px}.cropSliders{grid-template-columns:1fr;gap:9px}}
+@media(max-width:390px){.cards{grid-template-columns:1fr}.card{flex-direction:row;min-height:95px}}

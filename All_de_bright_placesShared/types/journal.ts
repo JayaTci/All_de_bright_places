@@ -11,7 +11,12 @@ export interface Goal {
   participants: GoalParticipant[]; memories: Memory[];
 }
 export interface EditorSession { username: EditorUsername; aal2: boolean; enrolled: boolean }
+export type PictureVisibility = "public" | "friends";
+export interface EditorProfile {
+  username: EditorUsername; bio: string; pictureVisibility: PictureVisibility;
+  hasPicture: boolean; pictureUrl: string | null; pictureVersion: string | null;
+}
 export interface HistoryEntry { id: number; actor: EditorUsername; goalTitle: string; summary: string; changedAt: string }
-export interface JournalData { goals: Goal[]; editor: EditorUsername | null; configured: boolean; unavailable: boolean }
+export interface JournalData { goals: Goal[]; profiles: EditorProfile[]; editor: EditorUsername | null; configured: boolean; unavailable: boolean }
 export interface GoalInput { title: string; description: string; category: Category; visibility: Visibility; participants: EditorUsername[] }
 export interface ApiError { error: string; code?: string }

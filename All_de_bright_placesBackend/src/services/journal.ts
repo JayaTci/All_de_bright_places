@@ -3,6 +3,7 @@ import "server-only";
 import type { Category, EditorUsername, Goal, HistoryEntry, JournalData, Visibility } from "@bright/shared";
 import { connection, serverClient } from "../config/supabase";
 import { editorSession, requireEditor } from "./auth";
+import { getProfiles } from "./profiles";
 
 interface PhotoRow { id: string; memory_id: string; caption: string; width: number; height: number; ready: boolean }
 interface MemoryRow { id: string; goal_id: string; author: EditorUsername; occurred_on: string; note: string; revision: number; created_at: string; deleted_at: string | null; photos: PhotoRow[] }
@@ -23,16 +24,20 @@ export function mapGoal(row: GoalRow): Goal {
 
 /** Reads the journal under caller RLS, returning a recoverable empty state on outages. */
 export async function getJournal(): Promise<JournalData> {
-  if (!connection()) return { goals: [], editor: null, configured: false, unavailable: false };
+  if (!connection()) return { goals: [], profiles: [], editor: null, configured: false, unavailable: false };
   try {
     const client = await serverClient(); const session = await editorSession(client);
     const editor = session?.aal2 ? session.username : null;
     let query = client.from("goals").select("*,goal_participants(*),memories(*,photos(*))").order("position");
     if (!editor) query = query.eq("visibility", "public").is("deleted_at", null);
     const result = await query;
-    if (result.error) return { goals: [], editor, configured: true, unavailable: true };
-    return { goals: (result.data || []).map(mapGoal), editor, configured: true, unavailable: false };
-  } catch { return { goals: [], editor: null, configured: true, unavailable: true }; }
+    if (result.error) return { goals: [], profiles: [], editor, configured: true, unavailable: true };
+    const goals = (result.data || []).map(mapGoal);
+    // A profile outage should leave already authorized journal content readable.
+    let profiles: JournalData["profiles"] = [];
+    try { profiles = await getProfiles(client, Boolean(editor)); } catch { /* Cards use initials until profiles recover. */ }
+    return { goals, profiles, editor, configured: true, unavailable: false };
+  } catch { return { goals: [], profiles: [], editor: null, configured: true, unavailable: true }; }
 }
 
 /**

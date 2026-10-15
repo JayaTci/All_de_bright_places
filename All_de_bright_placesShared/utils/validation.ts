@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CATEGORIES, EDITORS } from "../constants/journal";
 
 export const usernameSchema = z.enum(EDITORS);
+export const profileInputSchema = z.object({ bio: z.string().trim().max(240), pictureVisibility: z.enum(["public", "friends"]) });
 export const dateSchema = z.iso.date();
 export const goalInputSchema = z.object({
   title: z.string().trim().min(1).max(160), description: z.string().trim().max(4000),
