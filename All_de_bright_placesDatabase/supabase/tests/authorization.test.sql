@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public,extensions;
-select plan(30);
+select plan(33);
 insert into auth.users(id,email) values
  ('11111111-1111-4111-8111-111111111111','ruby@example.invalid'),
  ('22222222-2222-4222-8222-222222222222','jayatci@example.invalid'),
@@ -29,6 +29,8 @@ select set_config('storage.operation','object.sign',true);
 select is((select count(*)::int from storage.objects),0,'anonymous signing denied');
 select set_config('storage.operation','object.get_authenticated',true);
 select is((select count(*)::int from storage.objects),1,'public variant download allowed');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects),1,'public variant metadata allowed');
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"33333333-3333-4333-8333-333333333333","aal":"aal2","user_metadata":{"username":"ruby"}}',true);
@@ -45,6 +47,8 @@ select throws_ok($$select mutate_goal('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',999
 select lives_ok($$select mutate_goal('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1,'complete','{"username":"ruby","completedOn":"2026-10-14"}')$$,'editor completes participant');
 select is((select completed_on::text from goal_participants where goal_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),'2026-10-14','completion date persisted');
 select lives_ok($$select mutate_goal('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',2,'edit','{"title":"Public","description":"","category":"Travel","visibility":"private","participants":["ruby","jayatci"]}')$$,'publication changed transactionally');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects),1,'MFA editor can read private photo metadata');
 select is((select count(*)::int from goal_participants where goal_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and completed_on is null),1,'shared goal retains one incomplete participant');
 select throws_ok($$update photos set ready=true,width=99999 where id='ffffffff-ffff-4fff-8fff-ffffffffffff'$$,'23514',null,'invalid normalized photo dimensions rejected');
 select lives_ok($$select reserve_photo('dddddddd-dddd-4ddd-8ddd-dddddddddddd','') from generate_series(1,9)$$,'nine reservations plus ready photo fit the cap');
@@ -65,5 +69,7 @@ select set_config('request.jwt.claims','{}',true);
 select is((select count(*)::int from memories),0,'privacy change removes public memories');
 select set_config('storage.operation','object.get_authenticated',true);
 select is((select count(*)::int from storage.objects),0,'privacy change blocks subsequent downloads');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects),0,'privacy change blocks subsequent metadata reads');
 select * from finish();
 rollback;

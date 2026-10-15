@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public,extensions;
-select plan(22);
+select plan(25);
 insert into auth.users(id,email) values
  ('11111111-1111-4111-8111-111111111111','profile-ruby@example.invalid'),
  ('22222222-2222-4222-8222-222222222222','profile-jayatci@example.invalid');
@@ -37,12 +37,16 @@ select set_config('storage.operation','object.sign',true);
 select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),0,'signed picture URLs are denied');
 select set_config('storage.operation','object.get_authenticated',true);
 select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),1,'MFA editor can see Friends picture');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),1,'MFA editor can read Friends picture metadata');
 reset role;
 
 set local role anon;
 select set_config('request.jwt.claims','{}',true);
 select set_config('storage.operation','object.get_authenticated',true);
 select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),0,'visitor cannot see Friends picture');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),0,'visitor cannot read Friends picture metadata');
 reset role;
 
 set local role authenticated;
@@ -54,6 +58,8 @@ set local role anon;
 select set_config('request.jwt.claims','{}',true);
 select set_config('storage.operation','object.get_authenticated',true);
 select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),1,'visitor can see public picture');
+select set_config('storage.operation','object.get_authenticated_info',true);
+select is((select count(*)::int from storage.objects where bucket_id='profile-pictures'),1,'visitor can read public picture metadata');
 reset role;
 
 set local role authenticated;
