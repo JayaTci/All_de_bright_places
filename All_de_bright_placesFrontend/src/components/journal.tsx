@@ -67,9 +67,9 @@ export function Journal({ initial, view = "notebook", goalId }: { initial: Journ
   </Frame>;
 }
 
-/** Adds brief, original reflections inspired by the film's care for ordinary moments. */
+/** Adds a personal reminder to notice and keep ordinary moments. */
 function BrightNotes() {
-  return <section className={additions.brightNote} aria-labelledby="bright-note-title"><div><span className="eyebrow">A LITTLE INSPIRATION FOR THE IN-BETWEEN DAYS</span><h2 id="bright-note-title">All the bright little things</h2><p>Inspired by the 2020 film <cite>All the Bright Places</cite>. These are our own reminders, written for this notebook.</p></div><ul><li>Notice the small places that make an ordinary day feel like ours.</li><li>Make room for each other’s pace, and ask what kind of support would help.</li><li>Keep the good details. A song, a view, the way the light fell that day.</li></ul></section>;
+  return <section className={additions.brightNote} aria-labelledby="bright-note-title"><div className={additions.noteIntro}><span className="eyebrow">A NOTE TO OUR FUTURE SELVES</span><h2 id="bright-note-title">The moments we keep</h2><p>For the little things that make a day ours.</p></div><div className={additions.noteBody}><blockquote>We do not remember the days, we remember moments</blockquote><ul><li>Notice the small places that make an ordinary day feel like ours.</li><li>Make room for each other’s pace, and ask what kind of support would help.</li><li>Keep the good details. A song, a view, the way the light fell that day.</li></ul></div></section>;
 }
 
 /** Edits memory notes and handles attachment uploads without discarding drafts. */
