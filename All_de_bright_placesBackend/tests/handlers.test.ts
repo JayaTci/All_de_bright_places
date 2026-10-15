@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ client: vi.fn(), connection: vi.fn(), session:
 vi.mock("../src/config/supabase", () => ({ serverClient: mocks.client, connection: mocks.connection }));
 vi.mock("../src/services/auth", () => ({ editorSession: mocks.session, requireEditor: mocks.requireEditor }));
 import { getJournal, mapGoal } from "../src/services/journal";
-import { goalsPOST, loginPOST, sessionGET, mfaVerifyPOST, factorDELETE } from "../src/routes/handlers";
+import { goalsPOST, loginPOST, sessionGET, mfaVerifyPOST, factorDELETE, mediaGET } from "../src/routes/handlers";
 import { HttpError } from "../src/utils/http";
 
 /** Creates same-origin JSON mutation requests for security scenarios. */
@@ -50,6 +50,30 @@ describe("API failure states", () => {
     });
     expect(mapped.memories).toHaveLength(1); expect(mapped.memories[0].photos.map(photo => photo.id)).toEqual(["ready"]);
     expect(JSON.stringify(mapped)).not.toContain("Deleted note"); expect(JSON.stringify(mapped)).not.toContain("pending");
+  });
+  it("restores the caller session before reading a private memory photograph", async () => {
+    const order: string[] = [];
+    const image = new Blob([new Uint8Array([1, 2, 3])], { type: "image/webp" });
+    mocks.client.mockResolvedValue({
+      auth: { getUser: async () => { order.push("session"); return { data: { user: { id: "editor" } }, error: null }; } },
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => { order.push("metadata"); return { data: { id: "photo" }, error: null }; } }) }) }) }),
+      storage: { from: () => ({ download: async () => { order.push("storage"); return { data: image, error: null }; } }) },
+    });
+    const response = await mediaGET(new Request("http://localhost:3000/api/media/11111111-1111-4111-8111-111111111111?variant=thumbnail"), { params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }) });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/webp");
+    expect(order).toEqual(["session", "metadata", "storage"]);
+  });
+  it("keeps a private memory photograph unreadable to an anonymous viewer", async () => {
+    const download = vi.fn();
+    mocks.client.mockResolvedValue({
+      auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+      from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }),
+      storage: { from: () => ({ download }) },
+    });
+    const response = await mediaGET(new Request("http://localhost:3000/api/media/11111111-1111-4111-8111-111111111111"), { params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }) });
+    expect(response.status).toBe(404);
+    expect(download).not.toHaveBeenCalled();
   });
   it("denies a mutation before RPC execution without MFA", async () => {
     const rpc = vi.fn(); mocks.client.mockResolvedValue({ rpc }); mocks.requireEditor.mockRejectedValue(new HttpError(403, "Verify your authenticator first."));

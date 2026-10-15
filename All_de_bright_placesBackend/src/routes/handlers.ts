@@ -164,10 +164,19 @@ export async function mediaGET(request: Request, context: RouteContext) {
     const id = identifier((await context.params).id); const variant = new URL(request.url).searchParams.get("variant") || "display";
     if (!["thumbnail", "display"].includes(variant)) throw new HttpError(400, "Invalid photograph variant.");
     const client = await serverClient();
+    // Prime the caller's session before RLS checks; a private image is fetched
+    // independently of the page request that rendered its URL.
+    const { data: { user } } = await client.auth.getUser();
     const photo = await client.from("photos").select("id").eq("id", id).eq("ready", true).maybeSingle(); databaseError(photo.error);
-    if (!photo.data) throw new HttpError(404, "Photograph not found.");
+    if (!photo.data) {
+      if (user) console.warn("Memory photograph metadata was not visible to its authenticated requester.");
+      throw new HttpError(404, "Photograph not found.");
+    }
     const result = await client.storage.from("journal-photos").download(`${variant}/${id}.webp`);
-    if (result.error || !result.data) throw new HttpError(404, "Photograph not found.");
+    if (result.error || !result.data) {
+      console.warn("Memory photograph storage object was not readable.", result.error?.name);
+      throw new HttpError(404, "Photograph not found.");
+    }
     return new Response(result.data, { headers: { ...PRIVATE_HEADERS, "Content-Type": "image/webp", "Content-Security-Policy": "default-src 'none'; sandbox" } });
   });
 }
