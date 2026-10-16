@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ client: vi.fn(), connection: vi.fn(), session: vi.fn(), requireEditor: vi.fn() }));
 vi.mock("../src/config/supabase", () => ({ serverClient: mocks.client, connection: mocks.connection }));
 vi.mock("../src/services/auth", () => ({ editorSession: mocks.session, requireEditor: mocks.requireEditor }));
-import { getJournal, mapGoal } from "../src/services/journal";
-import { goalsPOST, loginPOST, sessionGET, mfaVerifyPOST, factorDELETE, mediaGET } from "../src/routes/handlers";
+import { getHistory, getJournal, mapGoal } from "../src/services/journal";
+import { goalsPOST, journalGET, loginPOST, sessionGET, mfaVerifyPOST, factorDELETE, mediaGET } from "../src/routes/handlers";
 import { HttpError } from "../src/utils/http";
 
 /** Creates same-origin JSON mutation requests for security scenarios. */
@@ -39,6 +39,49 @@ describe("API failure states", () => {
     const journal = await getJournal();
     expect(journal.goals).toHaveLength(1); expect(journal.goals[0].title).toBe("Visible");
     expect(journal.profiles).toEqual([]); expect(journal.unavailable).toBe(false);
+  });
+  it("limits goal-page reads to one visible goal without fetching profiles", async () => {
+    mocks.connection.mockReturnValue({ url: "https://service.example", key: "public" });
+    mocks.session.mockResolvedValue(null);
+    const id = "11111111-1111-4111-8111-111111111111";
+    const query = { order: vi.fn(), eq: vi.fn(), is: vi.fn(), then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve) };
+    query.order.mockReturnValue(query); query.eq.mockReturnValue(query); query.is.mockReturnValue(query);
+    const from = vi.fn(() => ({ select: () => query }));
+    mocks.client.mockResolvedValue({ from });
+    const result = await getJournal({ view: "goal", goalId: id });
+    expect(result.unavailable).toBe(false);
+    expect(query.eq).toHaveBeenCalledWith("visibility", "public");
+    expect(query.eq).toHaveBeenCalledWith("id", id);
+    expect(query.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+  it("shows account Trash through an MFA editor session only", async () => {
+    mocks.connection.mockReturnValue({ url: "https://service.example", key: "public" });
+    mocks.session.mockResolvedValue({ username: "ruby", aal2: true });
+    const query = { order: vi.fn(), not: vi.fn(), then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve) };
+    query.order.mockReturnValue(query); query.not.mockReturnValue(query);
+    const from = vi.fn((table: string) => table === "goals" ? { select: () => query } : { select: () => ({ in: async () => ({ data: [], error: null }) }) });
+    mocks.client.mockResolvedValue({ from });
+    const result = await getJournal({ view: "account" });
+    expect(result.editor).toBe("ruby");
+    expect(query.not).toHaveBeenCalledWith("deleted_at", "is", null);
+  });
+  it("loads history with one editor check and no full journal request", async () => {
+    mocks.connection.mockReturnValue({ url: "https://service.example", key: "public" });
+    mocks.session.mockResolvedValue({ username: "ruby", aal2: true });
+    const query = { order: vi.fn(), limit: vi.fn().mockResolvedValue({ data: [], error: null }) };
+    query.order.mockReturnValue(query);
+    const from = vi.fn(() => ({ select: () => query }));
+    mocks.client.mockResolvedValue({ from });
+    expect(await getHistory()).toEqual({ editor: "ruby", entries: [] });
+    expect(mocks.session).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledWith("editor_history");
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+  it("rejects unsupported journal views before any database request", async () => {
+    const response = await journalGET(new Request("http://localhost:3000/api/journal?view=unknown"));
+    expect(response.status).toBe(400);
+    expect(mocks.client).not.toHaveBeenCalled();
   });
   it("never publishes unfinished photographs or deleted memory contents in DTOs", () => {
     const mapped = mapGoal({

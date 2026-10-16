@@ -11,7 +11,7 @@
     "build": "pnpm --filter @bright/frontend build",
     "start": "pnpm --filter @bright/frontend start",
     "typecheck": "tsc --noEmit -p All_de_bright_placesFrontend/tsconfig.json && tsc --noEmit -p All_de_bright_placesBackend/tsconfig.json",
-    "lint": "eslint --config All_de_bright_placesFrontend/eslint.config.mjs All_de_bright_placesFrontend/src All_de_bright_placesFrontend/tests All_de_bright_placesBackend/src All_de_bright_placesBackend/tests All_de_bright_placesShared scripts",
+    "lint": "eslint --config All_de_bright_placesFrontend/eslint.config.mjs All_de_bright_placesFrontend/src All_de_bright_placesFrontend/tests All_de_bright_placesBackend/src All_de_bright_placesBackend/tests All_de_bright_placesShared scripts tests",
     "test": "vitest run --config All_de_bright_placesFrontend/vitest.config.ts",
     "test:e2e": "playwright test --config tests/playwright.config.ts",
     "test:db": "node scripts/db-sync-migrations.mjs && supabase --workdir All_de_bright_placesDatabase test db",

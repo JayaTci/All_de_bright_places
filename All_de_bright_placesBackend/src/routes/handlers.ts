@@ -4,7 +4,7 @@ import { z } from "zod";
 import { goalInputSchema, goalMutationSchema, memoryInputSchema, memoryMutationSchema, loginSchema, profileInputSchema, usernameSchema } from "@bright/shared";
 import { connection, serverClient } from "../config/supabase";
 import { editorSession, requireEditor } from "../services/auth";
-import { getJournal } from "../services/journal";
+import { getJournal, type JournalScope } from "../services/journal";
 import { MAX_UPLOAD_BYTES, normalizePhoto, photoPaths } from "../services/photos";
 import { getProfile, getProfiles, MAX_PROFILE_PICTURE_BYTES, profilePicturePath, publishProfilePicture, removeProfilePicture } from "../services/profiles";
 import { api, assertOrigin, databaseError, HttpError, identifier, json, PRIVATE_HEADERS, readJson, readUpload } from "../utils/http";
@@ -21,8 +21,21 @@ const verifySchema = z.object({ factorId: z.uuid().optional(), code: z.string().
 const passwordSchema = z.object({ password: z.string().min(12).max(128) });
 const recoverySchema = z.object({ tokenHash: z.string().min(16).max(512), type: z.enum(["recovery", "invite"]) });
 
-/** Serves visible goals, distinguishing empty journals from unavailable services. */
-export async function journalGET() { return api(async () => json(await getJournal())); }
+/** Serves only the requested journal view through the viewer's database policies. */
+export async function journalGET(request: Request) {
+  return api(async () => {
+    const params = new URL(request.url).searchParams;
+    const view = params.get("view") || "notebook";
+    let scope: JournalScope;
+    if (view === "notebook" || view === "memories" || view === "account") scope = { view };
+    else if (view === "goal") {
+      const goalId = params.get("goalId");
+      if (!goalId || !z.uuid().safeParse(goalId).success) throw new HttpError(400, "Invalid goal page.");
+      scope = { view, goalId };
+    } else throw new HttpError(400, "Invalid journal page.");
+    return json(await getJournal(scope));
+  });
+}
 
 /** Returns both public biographies and picture links allowed for this viewer. */
 export async function profilesGET() {

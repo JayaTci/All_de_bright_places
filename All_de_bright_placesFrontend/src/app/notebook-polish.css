@@ -62,6 +62,41 @@
 .row-number, .row-meta, .category-label { font-size: 10px; }
 .row-number { color: #665c4e; }
 .row-meta { color: #6f6557; }
+.row-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+}
+.row-menu-trigger:hover, .row-menu-trigger[data-state="open"] { background: #f0e6d8; color: var(--ink); }
+.row-menu-content {
+  min-width: 160px;
+  padding: 5px;
+  z-index: 25;
+  background: #fefcf7;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 20px #29262126;
+}
+.row-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  outline: 0;
+  cursor: pointer;
+}
+.row-menu-item[data-highlighted] { background: var(--soft); }
+.row-menu-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+.notebook-check { width: 44px; height: 44px; }
+.notebook-check > span { inset: 10px; }
+.icon-button { width: 44px; height: 44px; }
+.text-button { min-height: 44px; }
 .category-label { color: #594d37; }
 .category-food { color: #774733; }
 .category-adventure { color: #704c27; }
@@ -96,7 +131,7 @@
 @media (max-width: 767px) {
   .site-header { gap: 14px; }
   .site-header nav { justify-content: flex-start; flex-wrap: wrap; gap: 4px clamp(13px, 4vw, 24px); font-size: 11px; }
-  .site-header nav > a { white-space: nowrap; }
+  .site-header nav > a { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; }
   .hero { padding: 50px 0 52px 10px; }
   .hero h1 { font-size: clamp(47px, 11vw, 67px); line-height: 1.06; }
   .hero p { max-width: 315px; font-size: 13px; }
@@ -108,6 +143,14 @@
   .list-heading .button { min-height: 38px; font-size: 11px; }
   .filters { gap: 12px; }
   .filter-select select { font-size: 11px; }
+  .filter-select select, .search-field input, .editor-form input, .editor-form textarea, .editor-form select, .standalone-label input { font-size: 16px; }
+  .filter-select select, .search-field input { min-height: 44px; }
+  .private-label { display: inline-flex; }
+  .goal-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 4px 8px; }
+  .row-number { grid-column: 1; grid-row: 1; }
+  .row-main { grid-column: 2; grid-row: 1; }
+  .participant-checks { grid-column: 2; grid-row: 2; }
+  .row-menu-trigger { grid-column: 3; grid-row: 1; }
   .row-meta, .category-label { font-size: 9px; }
   .memories-page > h1 { font-size: clamp(42px, 10vw, 53px); }
 }

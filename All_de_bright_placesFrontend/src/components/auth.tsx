@@ -6,7 +6,7 @@ import Script from "next/script";
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import type { EditorSession } from "@bright/shared";
 import { request } from "../services/api";
-import { Frame } from "./journal";
+import { Frame } from "./frame";
 
 declare global { interface Window { turnstile?: { render: (element: HTMLElement, options: { sitekey: string; callback: (token: string) => void; "expired-callback": () => void; "error-callback": () => void }) => string; remove: (id: string) => void } } }
 
@@ -32,12 +32,80 @@ export function SignIn() {
 
 /** Redeems owner-generated links before allowing a replacement password. */
 export function Recovery() {
-  const params = useSearchParams(); const [verified, setVerified] = useState(false); const [linkVerified, setLinkVerified] = useState(false); const [password, setPassword] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); const [code, setCode] = useState(""); const [enrollment, setEnrollment] = useState<{ factorId: string; qrCode: string; secret: string } | null>(null);
-  /** Verifies the URL token once without exposing it in application output. */
-  async function verifyLink() { setBusy(true); setMessage(""); try { const tokenHash = params?.get("token_hash"); const type = params?.get("type"); if (!tokenHash || !["recovery", "invite"].includes(type || "")) throw new Error("This recovery link is incomplete. Ask the owner for a new one."); await request("/api/auth/recovery", { tokenHash, type }); const result = await request<{ session: EditorSession }>("/api/auth/session", undefined, "GET"); setLinkVerified(true); if (result.session.aal2) setVerified(true); else if (!result.session.enrolled) setEnrollment(await request("/api/auth/mfa/enroll")); window.history.replaceState({}, "", "/auth/recovery"); } catch (failure) { setMessage(failure instanceof Error ? failure.message : "This link could not be verified."); } finally { setBusy(false); } }
+  const params = useSearchParams();
+  const [verified, setVerified] = useState(false);
+  const [linkVerified, setLinkVerified] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [needsEnrollment, setNeedsEnrollment] = useState(false);
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState("");
+  const [enrollment, setEnrollment] = useState<{ factorId: string; qrCode: string; secret: string } | null>(null);
+
+  /** Resumes recovery after a redeemed link without requesting the one-time token again. */
+  async function loadSession() {
+    const result = await request<{ session: EditorSession | null }>("/api/auth/session", undefined, "GET");
+    if (!result.session) throw new Error("Your recovery session could not be opened. Please try again.");
+    setSessionReady(true);
+    if (result.session.aal2) setVerified(true);
+    else if (!result.session.enrolled) {
+      setNeedsEnrollment(true);
+      setEnrollment(await request("/api/auth/mfa/enroll"));
+    }
+  }
+
+  /** Redeems the URL once, then removes its token before checking MFA state. */
+  async function verifyLink() {
+    setBusy(true); setMessage("");
+    try {
+      const tokenHash = params?.get("token_hash");
+      const type = params?.get("type");
+      if (!tokenHash || !["recovery", "invite"].includes(type || "")) throw new Error("This recovery link is incomplete. Ask the owner for a new one.");
+      await request("/api/auth/recovery", { tokenHash, type });
+      setLinkVerified(true);
+      window.history.replaceState({}, "", "/auth/recovery");
+      await loadSession();
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "This link could not be verified."); }
+    finally { setBusy(false); }
+  }
+
+  /** Retries the step that failed after a valid recovery link was redeemed. */
+  async function retryRecovery() {
+    setBusy(true); setMessage("");
+    try {
+      if (!sessionReady) await loadSession();
+      else if (needsEnrollment) setEnrollment(await request("/api/auth/mfa/enroll"));
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Recovery could not continue. Please try again."); }
+    finally { setBusy(false); }
+  }
+
   /** Requires an authenticator challenge before exposing the password replacement step. */
-  async function verifyAuthenticator() { setBusy(true); setMessage(""); try { await request("/api/auth/mfa/verify", { factorId: enrollment?.factorId, code }); setCode(""); setVerified(true); } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Verification failed."); } finally { setBusy(false); } }
-  /** Changes the recovered account password, then hands control to MFA sign-in. */
-  async function save() { setBusy(true); try { await request("/api/auth/password", { password }); setPassword(""); window.location.assign("/login"); } catch (failure) { setMessage(String(failure)); } finally { setBusy(false); } }
-  return <Frame><section className="recovery-page auth-paper"><h1>A fresh little start.</h1><p>Your private pages are waiting for you.</p>{!linkVerified ? <button className="button primary" disabled={busy} onClick={() => void verifyLink()}>Verify recovery link</button> : !verified ? <><p>Verify your authenticator before choosing a new password.</p>{enrollment && <div className="enrollment"><img src={enrollment.qrCode} width={190} height={190} alt="Scan with your authenticator app" /><label>Setup key<input readOnly value={enrollment.secret} /></label></div>}<form className="editor-form" onSubmit={event => { event.preventDefault(); void verifyAuthenticator(); }}><label>Authenticator code<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ""))} /></label><button className="button primary" disabled={busy || code.length !== 6}>Verify authenticator</button></form></> : <form className="editor-form" onSubmit={event => { event.preventDefault(); void save(); }}><label>New password<input type="password" autoComplete="new-password" minLength={12} maxLength={128} required value={password} onChange={event => setPassword(event.target.value)} /></label><button className="button primary" disabled={busy}>Set password and continue</button></form>}{message && <p role="alert" className="error">{message}</p>}</section></Frame>;
+  async function verifyAuthenticator() {
+    setBusy(true); setMessage("");
+    try { await request("/api/auth/mfa/verify", { factorId: enrollment?.factorId, code }); setCode(""); setVerified(true); }
+    catch (failure) { setMessage(failure instanceof Error ? failure.message : "Verification failed."); }
+    finally { setBusy(false); }
+  }
+
+  /** Changes the recovered password and clears the recovery page through sign-in. */
+  async function save() {
+    setBusy(true); setMessage("");
+    try { await request("/api/auth/password", { password }); setPassword(""); window.location.assign("/login"); }
+    catch (failure) { setMessage(failure instanceof Error ? failure.message : "The password could not be changed."); }
+    finally { setBusy(false); }
+  }
+
+  return <Frame><section className="recovery-page auth-paper">
+    <h1>A fresh little start.</h1><p>Your private pages are waiting for you.</p>
+    {!linkVerified ? <button className="button primary" disabled={busy} onClick={() => void verifyLink()}>Verify recovery link</button>
+      : !sessionReady ? <button className="button primary" disabled={busy} onClick={() => void retryRecovery()}>Continue recovery</button>
+      : !verified ? <>
+        <p>Verify your authenticator before choosing a new password.</p>
+        {needsEnrollment && !enrollment && <button className="button primary" disabled={busy} onClick={() => void retryRecovery()}>Set up an authenticator</button>}
+        {enrollment && <div className="enrollment"><img src={enrollment.qrCode} width={190} height={190} alt="Scan with your authenticator app" /><label>Setup key<input readOnly value={enrollment.secret} /></label></div>}
+        {(!needsEnrollment || enrollment) && <form className="editor-form" onSubmit={event => { event.preventDefault(); void verifyAuthenticator(); }}><label>Authenticator code<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ""))} /></label><button className="button primary" disabled={busy || code.length !== 6}>Verify authenticator</button></form>}
+      </> : <form className="editor-form" onSubmit={event => { event.preventDefault(); void save(); }}><label>New password<input type="password" autoComplete="new-password" minLength={12} maxLength={128} required value={password} onChange={event => setPassword(event.target.value)} /></label><button className="button primary" disabled={busy}>Set password and continue</button></form>}
+    {message && <p role="alert" className="error">{message}</p>}
+  </section></Frame>;
 }

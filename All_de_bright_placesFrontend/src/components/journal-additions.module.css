@@ -52,14 +52,6 @@
   line-height: 1.04;
 }
 
-.noteBody blockquote::before {
-  content: "“";
-  position: absolute;
-  left: -0.43em;
-  top: -0.04em;
-  color: #a67654;
-}
-
 .noteBody ul {
   display: grid;
   gap: 9px;
@@ -102,6 +94,4 @@
     border-left: 0;
   }
 
-  .noteBody blockquote { padding-left: 12px; }
-  .noteBody blockquote::before { left: -0.12em; }
 }
